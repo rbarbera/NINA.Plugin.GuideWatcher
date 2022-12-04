@@ -1,0 +1,3 @@
+﻿# GuiderWatcher
+
+"# NINA.Plugin.GuideWatcher" 
