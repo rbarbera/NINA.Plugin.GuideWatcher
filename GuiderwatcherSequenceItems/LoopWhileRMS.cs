@@ -39,7 +39,6 @@ namespace GuiderWatcher.GuiderwatcherTestCategory {
         }
 
         private async Task InterruptWhenRMSIsOverLimits() {
-
             if (!Check(null, null)) {
                 if (this.Parent != null && this.Parent.Status == SequenceEntityStatus.RUNNING) {
                     Logger.Info($"LastRMS is over limit RMS {lastRMS:F2} > {RMS:F2} - Interrupting current Instruction Set");
@@ -48,12 +47,6 @@ namespace GuiderWatcher.GuiderwatcherTestCategory {
             }
         }
 
-        /// <summary>
-        /// Once this check returns false, the condition will cause its parent instruction set to skip the rest and proceed with the next set
-        /// </summary>
-        /// <param name="previousItem"></param>
-        /// <param name="nextItem"></param>
-        /// <returns></returns>
         public override bool Check(ISequenceItem previousItem, ISequenceItem nextItem) {
             this.lastRMS = guiderMediator.GetInfo().RMSError.Total.Arcseconds;
             Logger.Info($"LastRMS {lastRMS:F2}");
