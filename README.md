@@ -1,3 +1,1 @@
-﻿# GuiderWatcher
-
-"# NINA.Plugin.GuideWatcher" 
+# NINA.Plugin.GuideWatcher
