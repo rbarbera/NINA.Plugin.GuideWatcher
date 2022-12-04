@@ -7,6 +7,7 @@ using NINA.Sequencer.SequenceItem;
 using NINA.Sequencer.Utility;
 using System;
 using System.ComponentModel.Composition;
+using System.Runtime.Serialization;
 using System.Threading.Tasks;
 
 namespace GuiderWatcher.GuiderwatcherTestCategory {
@@ -35,7 +36,13 @@ namespace GuiderWatcher.GuiderwatcherTestCategory {
 
         [JsonProperty]
         public string LastCheckResult {
-            get { return $"{lastRMS:F2}\" <= {RMS:F2}\""; }
+            get {
+                if (this.Parent != null && this.Parent.Status == SequenceEntityStatus.RUNNING) {
+                    return $"{lastRMS:F2}\" <= {RMS:F2}\"";
+                } else {
+                    return "";
+                }
+            }
         }
 
         private async Task InterruptWhenRMSIsOverLimits() {
@@ -49,7 +56,6 @@ namespace GuiderWatcher.GuiderwatcherTestCategory {
 
         public override bool Check(ISequenceItem previousItem, ISequenceItem nextItem) {
             this.lastRMS = guiderMediator.GetInfo().RMSError.Total.Arcseconds;
-            Logger.Info($"LastRMS {lastRMS:F2}");
             RaisePropertyChanged("LastCheckResult");
             return lastRMS <= RMS;
         }
@@ -66,6 +72,16 @@ namespace GuiderWatcher.GuiderwatcherTestCategory {
 
             return clon;
         }
+
+        [OnDeserialized]
+        public void OnDeserialized(StreamingContext context) {
+            RunWatchdogIfInsideSequenceRoot();
+        }
+
+        public override void AfterParentChanged() {
+            RunWatchdogIfInsideSequenceRoot();
+        }
+
 
         public override string ToString() {
             return $"Category: {Category}, Item: {nameof(LoopWhileRMS)}, lastRMS: {lastRMS:F2}, RMS:{RMS:F2}";
