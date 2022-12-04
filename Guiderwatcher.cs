@@ -1,4 +1,4 @@
-﻿using GuiderWatcher.Properties;
+﻿using RBC.NINA.Plugin.GuiderWatcher.Properties;
 using NINA.Core.Model;
 using NINA.Core.Utility;
 using NINA.Image.ImageData;
@@ -16,9 +16,9 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
-using Settings = GuiderWatcher.Properties.Settings;
+using Settings = RBC.NINA.Plugin.GuiderWatcher.Properties.Settings;
 
-namespace GuiderWatcher {
+namespace RBC.NINA.Plugin.GuiderWatcher {
     /// <summary>
     /// This class exports the IPluginManifest interface and will be used for the general plugin information and options
     /// The base class "PluginBase" will populate all the necessary Manifest Meta Data out of the AssemblyInfo attributes. Please fill these accoringly

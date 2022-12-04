@@ -10,7 +10,7 @@ using System.ComponentModel.Composition;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
 
-namespace GuiderWatcher.GuiderwatcherTestCategory {
+namespace RBC.NINA.Plugin.GuiderWatcher {
 
     [ExportMetadata("Name", "Loop while RMS")]
     [ExportMetadata("Description", "Loop while RMS is under your limit")]

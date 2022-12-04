@@ -1,4 +1,4 @@
-﻿using GuiderWatcher.Properties;
+﻿using RBC.NINA.Plugin.GuiderWatcher.Properties;
 using Newtonsoft.Json;
 using NINA.Core.Model;
 using NINA.Core.Utility.Notification;
@@ -17,7 +17,7 @@ using System.Windows;
 using Accord.IO;
 using static NINA.Equipment.SDK.CameraSDKs.SBIGSDK.SbigSharp.SBIG;
 
-namespace GuiderWatcher.GuiderwatcherTestCategory {
+namespace RBC.NINA.Plugin.GuiderWatcher {
    
     [ExportMetadata("Name", "Wait for RMS")]
     [ExportMetadata("Description", "Wait until guiding RMS goes under your limit")]
