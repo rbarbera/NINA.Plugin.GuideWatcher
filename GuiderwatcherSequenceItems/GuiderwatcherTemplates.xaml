@@ -26,7 +26,13 @@
                         Margin="5,0,0,0"
                         Text="{Binding RMS}"
                         TextAlignment="Right" />
-                    <TextBlock VerticalAlignment="Center" Text="&quot;" />
+                    <TextBlock VerticalAlignment="Center" Text="&quot; | history size" />
+                    <TextBox
+                        MinWidth="40"
+                        Margin="5,0,0,0"
+                        Text="{Binding HistorySize}"
+                        TextAlignment="Right" />
+                    <TextBlock VerticalAlignment="Center" Text="steps" />
                 </StackPanel>
             </nina:SequenceBlockView.SequenceItemContent>
         </nina:SequenceBlockView>
@@ -44,7 +50,13 @@
                         Margin="5,0,0,0"
                         Text="{Binding RMS}"
                         TextAlignment="Right" />
-                    <TextBlock VerticalAlignment="Center" Text="&quot;" />
+                    <TextBlock VerticalAlignment="Center" Text="&quot; | history size" />
+                    <TextBox
+                        MinWidth="40"
+                        Margin="5,0,0,0"
+                        Text="{Binding HistorySize}"
+                        TextAlignment="Right" />
+                    <TextBlock VerticalAlignment="Center" Text="steps" />
                 </StackPanel>
             </nina:SequenceBlockView.SequenceItemContent>
             <nina:SequenceBlockView.SequenceItemProgressContent>

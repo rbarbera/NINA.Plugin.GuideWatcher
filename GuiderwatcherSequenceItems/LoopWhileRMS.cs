@@ -1,7 +1,11 @@
-﻿using Newtonsoft.Json;
+﻿using Accord;
+using Newtonsoft.Json;
 using NINA.Core.Enum;
+using NINA.Core.Interfaces;
 using NINA.Core.Utility;
+using NINA.Equipment.Equipment;
 using NINA.Equipment.Interfaces.Mediator;
+using NINA.Profile.Interfaces;
 using NINA.Sequencer.Conditions;
 using NINA.Sequencer.SequenceItem;
 using NINA.Sequencer.Utility;
@@ -23,41 +27,69 @@ namespace RBC.NINA.Plugin.GuiderWatcher {
         public LoopWhileRMS(IGuiderMediator guiderMediator) {
             this.guiderMediator = guiderMediator;
             this.RMS = 0.8;
-            this.lastRMS = 0;
+            this.historySize = 10;
+            this.history = new GuideStepsHistory(historySize, GuiderScaleEnum.ARCSECONDS, 1);
+            guiderMediator.GuideEvent += OnGuideEvent;
+        }
 
-            ConditionWatchdog = new ConditionWatchdog(InterruptWhenRMSIsOverLimits, TimeSpan.FromSeconds(5));
+        private async void OnGuideEvent(object sender, IGuideStep e) {
+            history.AddGuideStep(e);
+            RaisePropertyChanged(nameof(LastCheckResult));
+            if (isLooping && RMSTotal > RMS) {
+                Logger.Info("Interrupt loop");
+                await InterruptLoop();
+            }
         }
 
         private IGuiderMediator guiderMediator;
-        private double lastRMS;
+        private GuideStepsHistory history;
+        private bool isLooping = false;
 
         [JsonProperty]
         public double RMS { get; set; }
 
+        private int historySize;
+
+        [JsonProperty]
+        public int HistorySize {
+            get {
+                return historySize;
+            }
+            set {
+                historySize = value;
+                history.HistorySize = historySize;
+                RaisePropertyChanged(nameof(LastCheckResult));
+            }
+        }
+
+        
         [JsonProperty]
         public string LastCheckResult {
             get {
                 if (this.Parent != null && this.Parent.Status == SequenceEntityStatus.RUNNING) {
-                    return $"{lastRMS:F2}\" <= {RMS:F2}\"";
+                    return $"{RMSTotal:F2}\" <= {RMS:F2}\"";
                 } else {
                     return "";
                 }
             }
         }
 
-        private async Task InterruptWhenRMSIsOverLimits() {
-            if (!Check(null, null)) {
-                if (this.Parent != null && this.Parent.Status == SequenceEntityStatus.RUNNING) {
-                    Logger.Info($"LastRMS is over limit RMS {lastRMS:F2} > {RMS:F2} - Interrupting current Instruction Set");
-                    await this.Parent.Interrupt();
-                }
+        double RMSTotal {
+            get { return history.RMS.Total * 3.0; }
+        }
+
+        private async Task InterruptLoop() {
+            if (this.Parent != null && this.Parent.Status == SequenceEntityStatus.RUNNING) {
+                Logger.Info($"RMS is over limit {RMSTotal:F2} > {RMS:F2} - Interrupting current Instruction Set");
+                isLooping = false;
+                await this.Parent.Interrupt();
             }
         }
 
         public override bool Check(ISequenceItem previousItem, ISequenceItem nextItem) {
-            this.lastRMS = guiderMediator.GetInfo().RMSError.Total.Arcseconds;
-            RaisePropertyChanged("LastCheckResult");
-            return lastRMS <= RMS;
+            Logger.Info("Check");
+            isLooping = RMSTotal <= RMS;
+            return RMSTotal <= RMS;
         }
 
         public override object Clone() {
@@ -69,22 +101,13 @@ namespace RBC.NINA.Plugin.GuiderWatcher {
             };
 
             clon.RMS = this.RMS;
+            clon.HistorySize = this.HistorySize;
 
             return clon;
         }
 
-        [OnDeserialized]
-        public void OnDeserialized(StreamingContext context) {
-            RunWatchdogIfInsideSequenceRoot();
-        }
-
-        public override void AfterParentChanged() {
-            RunWatchdogIfInsideSequenceRoot();
-        }
-
-
         public override string ToString() {
-            return $"Category: {Category}, Item: {nameof(LoopWhileRMS)}, lastRMS: {lastRMS:F2}, RMS:{RMS:F2}";
+            return $"Category: {Category}, Item: {nameof(LoopWhileRMS)}, RMS:{RMS:F2}, HistorySize:{HistorySize}";
         }
     }
 }

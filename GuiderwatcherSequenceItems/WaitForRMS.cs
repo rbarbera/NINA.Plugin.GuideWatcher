@@ -16,6 +16,9 @@ using System.Threading.Tasks;
 using System.Windows;
 using Accord.IO;
 using static NINA.Equipment.SDK.CameraSDKs.SBIGSDK.SbigSharp.SBIG;
+using NINA.Core.Enum;
+using NINA.Core.Interfaces;
+using NINA.Equipment.Equipment;
 
 namespace RBC.NINA.Plugin.GuiderWatcher {
    
@@ -28,32 +31,58 @@ namespace RBC.NINA.Plugin.GuiderWatcher {
     public class WaitForRMS : SequenceItem {
     
         [ImportingConstructor]
-        public WaitForRMS(IGuiderMediator applicationMediator) {
-            this.GuiderMediator = applicationMediator;
+        public WaitForRMS(IGuiderMediator guiderMediator) {
+            this.guiderMediator = guiderMediator;
             this.RMS = 0.8;
+            this.historySize = 10;
+            this.history = new GuideStepsHistory(historySize, GuiderScaleEnum.ARCSECONDS, 1);
+            this.guiderMediator.GuideEvent += OnGuideEvent;
+
         }
 
-        IGuiderMediator GuiderMediator;
         public WaitForRMS(WaitForRMS copyMe) {
-            this.GuiderMediator = copyMe.GuiderMediator;
+            this.guiderMediator = copyMe.guiderMediator;
             this.RMS = copyMe.RMS;
+            this.historySize = copyMe.historySize;
+            this.history = new GuideStepsHistory(historySize, GuiderScaleEnum.ARCSECONDS, 1);
+            this.guiderMediator.GuideEvent += OnGuideEvent;
 
             CopyMetaData(copyMe);
         }
+        private void OnGuideEvent(object sender, IGuideStep e) {
+            history.AddGuideStep(e);
+        }
+
+        private IGuiderMediator guiderMediator;
+        private GuideStepsHistory history;      
 
         [JsonProperty]
         public double RMS { get; set; }
 
+        private int historySize;
+
+        [JsonProperty]
+        public int HistorySize {
+            get {
+                return historySize;
+            }
+            set {
+                historySize = value;
+                history.HistorySize = historySize;
+            }
+        }
+
+        double RMSTotal {
+            get { return history.RMS.Total * 3.0; }
+        }
 
         public override async Task Execute(IProgress<ApplicationStatus> progress, CancellationToken token) {
-            var error = this.GuiderMediator.GetInfo().RMSError.Total.Arcseconds;
             try {
-                while (error > this.RMS) {     
+                while (RMSTotal > this.RMS) {     
                     progress?.Report(new ApplicationStatus() {
-                        Status = $"Waiting for RMS {error:F2}\" <= {this.RMS:F2}\""
+                        Status = $"Waiting for RMS {RMSTotal:F2}\" <= {this.RMS:F2}\""
                     });
                     await Task.Delay(TimeSpan.FromSeconds(1), token);
-                    error = this.GuiderMediator.GetInfo().RMSError.Total.Arcseconds;
                 }
             } finally {
                 progress?.Report(new ApplicationStatus() { Status = "" });
