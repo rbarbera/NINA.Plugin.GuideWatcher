@@ -19,6 +19,7 @@ using static NINA.Equipment.SDK.CameraSDKs.SBIGSDK.SbigSharp.SBIG;
 using NINA.Core.Enum;
 using NINA.Core.Interfaces;
 using NINA.Equipment.Equipment;
+using NINA.Core.Utility;
 
 namespace RBC.NINA.Plugin.GuiderWatcher {
    
@@ -78,6 +79,7 @@ namespace RBC.NINA.Plugin.GuiderWatcher {
 
         public override async Task Execute(IProgress<ApplicationStatus> progress, CancellationToken token) {
             try {
+                Logger.Info($"Execute RMSTotal:{RMSTotal:F2}, RMS:{RMS:F2}");
                 while (RMSTotal > this.RMS) {     
                     progress?.Report(new ApplicationStatus() {
                         Status = $"Waiting for RMS {RMSTotal:F2}\" <= {this.RMS:F2}\""

@@ -9,7 +9,9 @@ using NINA.Profile.Interfaces;
 using NINA.Sequencer.Conditions;
 using NINA.Sequencer.SequenceItem;
 using NINA.Sequencer.Utility;
+using NINA.Sequencer.Validations;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
@@ -22,7 +24,10 @@ namespace RBC.NINA.Plugin.GuiderWatcher {
     [ExportMetadata("Category", "Guider Watcher")]
     [Export(typeof(ISequenceCondition))]
     [JsonObject(MemberSerialization.OptIn)]
-    public class LoopWhileRMS : SequenceCondition {
+    public class LoopWhileRMS : SequenceCondition, IValidatable {
+        private IList<string> issues = new List<string>();
+        public IList<string> Issues { get => issues; set { issues = value; RaisePropertyChanged(); } }
+
         [ImportingConstructor]
         public LoopWhileRMS(IGuiderMediator guiderMediator) {
             this.guiderMediator = guiderMediator;
@@ -73,6 +78,14 @@ namespace RBC.NINA.Plugin.GuiderWatcher {
                 }
             }
         }
+        [JsonProperty]
+        public string Inherited {
+            get {
+                return $"History size:{HistorySize}| RMS:{RMS:F2}";
+            }
+        }
+
+
 
         double RMSTotal {
             get { return history.RMS.Total * 3.0; }
@@ -87,8 +100,8 @@ namespace RBC.NINA.Plugin.GuiderWatcher {
         }
 
         public override bool Check(ISequenceItem previousItem, ISequenceItem nextItem) {
-            Logger.Info("Check");
             isLooping = RMSTotal <= RMS;
+            Logger.Info($"Check N:{history.GuideSteps.Count}, RMDTotal:{RMSTotal:F2}, RMS:{RMS:F2}, isLooping:{isLooping}");
             return RMSTotal <= RMS;
         }
 
@@ -106,8 +119,31 @@ namespace RBC.NINA.Plugin.GuiderWatcher {
             return clon;
         }
 
+        public bool Validate() {
+            var i = new List<String>();
+            if (this.Parent.Parent == null) {
+                i.Add("This item should be used on an inner Loop");
+            } else {
+                var items = (IList<ISequenceItem>)this.Parent.Parent.GetItemsSnapshot();
+                var found = false;
+                foreach (var item in items) {
+                    if (item is WaitForRMS waitFor) {
+                        this.RMS = waitFor.RMS;
+                        this.HistorySize = waitFor.HistorySize;
+                        found = true;
+                    }
+                }
+
+                if (!found) { i.Add("No WaitForRMS found on parent"); }
+            }
+            Issues = i;
+            return i.Count == 0;
+        }
+
+
         public override string ToString() {
             return $"Category: {Category}, Item: {nameof(LoopWhileRMS)}, RMS:{RMS:F2}, HistorySize:{HistorySize}";
         }
+
     }
 }
