@@ -37,7 +37,14 @@ namespace RBC.NINA.Plugin.GuiderWatcher {
         [JsonProperty]
         public string LastCheckResult {
             get {
+                /*
                 if (this.Parent != null && this.Parent.Status == SequenceEntityStatus.RUNNING) {
+                    return $"{lastRMS:F2}\" <= {RMS:F2}\"";
+                } else {
+                    return "";
+                }
+                */
+                if (this.lastRMS != 0) {
                     return $"{lastRMS:F2}\" <= {RMS:F2}\"";
                 } else {
                     return "";

@@ -271,6 +271,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Guiderwatcher.cs" />
+    <Compile Include="GuiderwatcherSequenceItems\LoopUntilDeviation.cs" />
     <Compile Include="GuiderwatcherSequenceItems\LoopWhileRMS.cs" />
     <Compile Include="Options.xaml.cs">
       <DependentUpon>Options.xaml</DependentUpon>
