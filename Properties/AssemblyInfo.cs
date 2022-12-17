@@ -47,7 +47,7 @@ using System.Runtime.InteropServices;
 //[Optional] The url to a featured logo that will be displayed in the plugin list next to the name
 [assembly: AssemblyMetadata("FeaturedImageURL", "")]
 //[Optional] A url to an example screenshot of your plugin in action
-[assembly: AssemblyMetadata("ScreenshotURL", "")]
+[assembly: AssemblyMetadata("ScreenshotURL", "https://github.com/rbarbera/NINA.Plugin.GuideWatcher/blob/75152dbaf9853c8bf43468e64d5c10e0b2c92390/doc/sample.png")]
 //[Optional] An additional url to an example example screenshot of your plugin in action
 [assembly: AssemblyMetadata("AltScreenshotURL", "")]
 //[Optional] An in-depth description of your plugin
@@ -58,6 +58,8 @@ We use PHD2, or any other guider solution, to watch for the quality of our mount
 But things happens. What about this windy nights on witch a wind gust can momentarily make your scope vibrate more that he guiding precision? You know the effect, a big spike on your guiding graph, well outside your usual ""good tracking band"". And what's worse, a ""moved"" image, that at the end you will remove from your stack. But this scenario could be worst if you are using long time exposures and the gust happens at the beginning of the exposure. You have ""wasted"" all the exposure time.
 
 The ironic situation is that PHD2 is perfectly aware of this deviation, but nobody is watching the watcher.... So, here is Guider Watcher a set of sequencer instructions that try to help you on this task.
+
+You have a global parameter, HistorySize to control how close GuiderWatcher will follow the guiding deviations. This number represent the number of guider frames that are used to compute the RMS used by the instructions that refer to RMS.
 
 * *WaitForRMS:* This instruction will wait until the guiding RMS recovers after any glitch. It's based on a RMS computed using the history size number of frames, so you can control how close you follow the RMS variations.
 
