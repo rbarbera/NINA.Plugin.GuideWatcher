@@ -31,49 +31,28 @@ namespace RBC.NINA.Plugin.GuiderWatcher {
     public class WaitForRMS : SequenceItem {
     
         [ImportingConstructor]
-        public WaitForRMS(IGuiderMediator guiderMediator) {
-            this.guiderMediator = guiderMediator;
+        public WaitForRMS() {
             this.RMS = 0.8;
-            this.historySize = 10;
-            this.history = new GuideStepsHistory(historySize, GuiderScaleEnum.ARCSECONDS, 1);
-            this.guiderMediator.GuideEvent += OnGuideEvent;
-
         }
 
         public WaitForRMS(WaitForRMS copyMe) {
-            this.guiderMediator = copyMe.guiderMediator;
             this.RMS = copyMe.RMS;
-            this.historySize = copyMe.historySize;
-            this.history = new GuideStepsHistory(historySize, GuiderScaleEnum.ARCSECONDS, 1);
-            this.guiderMediator.GuideEvent += OnGuideEvent;
 
             CopyMetaData(copyMe);
         }
-        private void OnGuideEvent(object sender, IGuideStep e) {
-            history.AddGuideStep(e);
-        }
-
-        private IGuiderMediator guiderMediator;
-        private GuideStepsHistory history;      
-
+        
         [JsonProperty]
         public double RMS { get; set; }
 
-        private int historySize;
-
-        [JsonProperty]
-        public int HistorySize {
-            get {
-                return historySize;
-            }
-            set {
-                historySize = value;
-                history.HistorySize = historySize;
-            }
-        }
 
         double RMSTotal {
-            get { return history.RMS.Total * 3.0; }
+            get {
+                if (GuiderWatcherShared.Instance.history.RMS.Total == 0) {
+                    return this.RMS * GuiderWatcherShared.Instance.history.PixelScale;
+                } else {
+                    return GuiderWatcherShared.Instance.history.RMS.Total * GuiderWatcherShared.Instance.history.PixelScale;
+                }
+            }
         }
 
         public override async Task Execute(IProgress<ApplicationStatus> progress, CancellationToken token) {

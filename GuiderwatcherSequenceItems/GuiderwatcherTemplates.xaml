@@ -26,12 +26,7 @@
                         Margin="5,0,0,0"
                         Text="{Binding RMS}"
                         TextAlignment="Right" />
-                    <TextBlock VerticalAlignment="Center" Text="&quot; | history" />
-                    <TextBox
-                        MinWidth="40"
-                        Margin="5,0,0,0"
-                        Text="{Binding HistorySize}"
-                        TextAlignment="Right" />
+                    <TextBlock VerticalAlignment="Center" Text="&quot;" />
                 </StackPanel>
             </nina:SequenceBlockView.SequenceItemContent>
         </nina:SequenceBlockView>
@@ -49,12 +44,31 @@
                         Margin="5,0,0,0"
                         Text="{Binding RMS}"
                         TextAlignment="Right" />
-                    <TextBlock VerticalAlignment="Center" Text="&quot; | history" />
+                    <TextBlock VerticalAlignment="Center" Text="&quot;" />
+             </StackPanel>
+            </nina:SequenceBlockView.SequenceItemContent>
+            <nina:SequenceBlockView.SequenceItemProgressContent>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock
+                        Margin="5,0,0,0"
+                        VerticalAlignment="Center"
+                        Text="{Binding LastCheckResult}" />
+                </StackPanel>
+            </nina:SequenceBlockView.SequenceItemProgressContent>
+        </nina:SequenceBlockView>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type local:LoopUntilDeviation}">
+        <nina:SequenceBlockView>
+            <nina:SequenceBlockView.SequenceItemContent>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock VerticalAlignment="Center" Text="over" />
                     <TextBox
                         MinWidth="40"
                         Margin="5,0,0,0"
-                        Text="{Binding HistorySize}"
+                        Text="{Binding RMS}"
                         TextAlignment="Right" />
+                    <TextBlock VerticalAlignment="Center" Text="&quot;" />
                 </StackPanel>
             </nina:SequenceBlockView.SequenceItemContent>
             <nina:SequenceBlockView.SequenceItemProgressContent>

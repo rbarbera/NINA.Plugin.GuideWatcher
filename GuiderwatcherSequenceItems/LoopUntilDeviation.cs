@@ -16,15 +16,15 @@ using System.Threading.Tasks;
 
 namespace RBC.NINA.Plugin.GuiderWatcher {
 
-    [ExportMetadata("Name", "Loop while RMS")]
-    [ExportMetadata("Description", "Loop while RMS is under your limit")]
+    [ExportMetadata("Name", "Loop until Deviation")]
+    [ExportMetadata("Description", "Loop untila the deviation on one frame is over your limit")]
     [ExportMetadata("Icon", "GuiderSVG")]
     [ExportMetadata("Category", "Guider Watcher")]
     [Export(typeof(ISequenceCondition))]
     [JsonObject(MemberSerialization.OptIn)]
-    public class LoopWhileRMS : SequenceCondition {
+    public class LoopUntilDeviation : SequenceCondition {
         [ImportingConstructor]
-        public LoopWhileRMS(IGuiderMediator guiderMediator) {
+        public LoopUntilDeviation(IGuiderMediator guiderMediator) {
             this.guiderMediator = guiderMediator;
             this.RMS = 0.8;
             guiderMediator.GuideEvent += OnGuideEvent;
@@ -32,7 +32,7 @@ namespace RBC.NINA.Plugin.GuiderWatcher {
 
         private async void OnGuideEvent(object sender, IGuideStep e) {
             RaisePropertyChanged(nameof(LastCheckResult));
-            if (isLooping && RMSTotal > RMS) {
+            if (isLooping && LastDeviation > RMS) {
                 Logger.Info("Interrupt loop");
                 await InterruptLoop();
             }
@@ -49,33 +49,36 @@ namespace RBC.NINA.Plugin.GuiderWatcher {
         public string LastCheckResult {
             get {
                 if (this.Parent != null && this.Parent.Status == SequenceEntityStatus.RUNNING) {
-                    return $"{RMSTotal:F2}\" <= {RMS:F2}\"";
+                    return $"{LastDeviation:F2}\" <= {RMS:F2}\"";
                 } else {
                     return "";
                 }
             }
         }
 
-        double RMSTotal {
-            get { return GuiderWatcherShared.Instance.history.RMS.Total * GuiderWatcherShared.Instance.history.PixelScale; }
+        double LastDeviation {
+            get {
+               return GuiderWatcherShared.Instance.LastDeviation * GuiderWatcherShared.Instance.history.PixelScale; 
+            }
         }
 
         private async Task InterruptLoop() {
             if (this.Parent != null && this.Parent.Status == SequenceEntityStatus.RUNNING) {
-                Logger.Info($"RMS is over limit {RMSTotal:F2} > {RMS:F2} - Interrupting current Instruction Set");
+                Logger.Info($"RMS is over limit {LastDeviation:F2} > {RMS:F2} - Interrupting current Instruction Set");
                 isLooping = false;
+                GuiderWatcherShared.Instance.history.Clear();
                 await this.Parent.Interrupt();
             }
         }
 
         public override bool Check(ISequenceItem previousItem, ISequenceItem nextItem) {
             Logger.Info("Check");
-            isLooping = RMSTotal <= RMS;
-            return RMSTotal <= RMS;
+            isLooping = LastDeviation <= RMS;
+            return LastDeviation <= RMS;
         }
 
         public override object Clone() {
-            var clon = new LoopWhileRMS(this.guiderMediator) {
+            var clon = new LoopUntilDeviation(this.guiderMediator) {
                 Icon = Icon,
                 Name = Name,
                 Category = Category,
@@ -88,7 +91,7 @@ namespace RBC.NINA.Plugin.GuiderWatcher {
         }
 
         public override string ToString() {
-            return $"Category: {Category}, Item: {nameof(LoopWhileRMS)}, RMS:{RMS:F2}, HistorySize:{GuiderWatcherShared.Instance.history.HistorySize}";
+            return $"Category: {Category}, Item: {nameof(LoopUntilDeviation)}, RMS:{RMS:F2}, HistorySize:{GuiderWatcherShared.Instance.history.HistorySize}";
         }
     }
 }

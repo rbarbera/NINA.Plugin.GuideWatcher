@@ -17,8 +17,39 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Settings = RBC.NINA.Plugin.GuiderWatcher.Properties.Settings;
+using NINA.Equipment.Interfaces.Mediator;
+using NINA.Equipment.Equipment;
+using NINA.Core.Enum;
+using NINA.Equipment.Interfaces;
+using NINA.WPF.Base.Mediator;
 
 namespace RBC.NINA.Plugin.GuiderWatcher {
+
+    public sealed class GuiderWatcherShared {
+        private readonly static GuiderWatcherShared _instance = new GuiderWatcherShared();
+
+        public GuideStepsHistory history;
+        private GuiderWatcherShared() {
+            history = new GuideStepsHistory(10, GuiderScaleEnum.PIXELS, 1);
+        }
+
+        public static GuiderWatcherShared Instance {
+            get {
+                return _instance;
+            }
+        }
+
+        public double LastDeviation {
+            get {
+                if (history == null || history.GuideSteps.Count == 0) {
+                    return 0;
+                } else {
+                    var last = history.GuideSteps.Last();
+                    return Math.Sqrt(last.DECDistanceRaw * last.DECDistanceRaw + last.RADistanceRaw * last.RADistanceRaw);
+                }
+            }
+        }
+    }
     /// <summary>
     /// This class exports the IPluginManifest interface and will be used for the general plugin information and options
     /// The base class "PluginBase" will populate all the necessary Manifest Meta Data out of the AssemblyInfo attributes. Please fill these accoringly
@@ -27,111 +58,54 @@ namespace RBC.NINA.Plugin.GuiderWatcher {
     /// The user interface for the settings will be defined by a DataTemplate with the key having the naming convention "Guiderwatcher_Options" where Guiderwatcher corresponds to the AssemblyTitle - In this template example it is found in the Options.xaml
     /// </summary>
     [Export(typeof(IPluginManifest))]
-    public class Guiderwatcher : PluginBase, INotifyPropertyChanged {
+    public class GuiderWatcher : PluginBase, INotifyPropertyChanged {
         private readonly IPluginOptionsAccessor pluginSettings;
         private readonly IProfileService profileService;
-        private readonly IImageSaveMediator imageSaveMediator;
-
-        // Implementing a file pattern
-        private readonly ImagePattern exampleImagePattern = new ImagePattern("$$EXAMPLEPATTERN$$", "An example of an image pattern implementation", "GuiderWatcher");
 
         [ImportingConstructor]
-        public Guiderwatcher(IProfileService profileService, IOptionsVM options, IImageSaveMediator imageSaveMediator) {
-            if (Settings.Default.UpdateSettings) {
-                Settings.Default.Upgrade();
-                Settings.Default.UpdateSettings = false;
-                CoreUtil.SaveSettings(Settings.Default);
+        public GuiderWatcher(IProfileService profileService, IGuiderMediator guiderMediator) {
+
+            if (Properties.Settings.Default.UpdateSettings) {
+                Properties.Settings.Default.Upgrade();
+                Properties.Settings.Default.UpdateSettings = false;
+                CoreUtil.SaveSettings(Properties.Settings.Default);
             }
 
             // This helper class can be used to store plugin settings that are dependent on the current profile
             this.pluginSettings = new PluginOptionsAccessor(profileService, Guid.Parse(this.Identifier));
             this.profileService = profileService;
-            // React on a changed profile
-            profileService.ProfileChanged += ProfileService_ProfileChanged;
+            if (GuiderWatcher.guiderMediator == null) {
+                GuiderWatcher.guiderMediator = guiderMediator;
+                guiderMediator.GuideEvent += GuiderMediator_GuideEvent;
+                GuiderWatcherShared.Instance.history.HistorySize = this.HistorySize;
 
-            // Hook into image saving for adding FITS keywords or image file patterns
-            this.imageSaveMediator = imageSaveMediator;
+                //history.PixelScale = (guiderMediator.GetDevice() as IGuider).PixelScale;
+            }
+        }
 
-            // Run these handlers when an image is being saved
-            this.imageSaveMediator.BeforeImageSaved += ImageSaveMediator_BeforeImageSaved;
-            this.imageSaveMediator.BeforeFinalizeImageSaved += ImageSaveMediator_BeforeFinalizeImageSaved;
-
-            // Register a new image file pattern for the Options > Imaging > File Patterns area
-            options.AddImagePattern(exampleImagePattern);
+        private void GuiderMediator_GuideEvent(object sender, global::NINA.Core.Interfaces.IGuideStep e) {
+            GuiderWatcherShared.Instance.history.AddGuideStep(e);
+            var arcsec = guiderMediator.GetInfo().RMSError.RA.Arcseconds;
+            var pix = guiderMediator.GetInfo().RMSError.RA.Pixel;
+            GuiderWatcherShared.Instance.history.PixelScale = arcsec / pix;
         }
 
         public override Task Teardown() {
-            // Make sure to unregister an event when the object is no longer in use. Otherwise garbage collection will be prevented.
-            profileService.ProfileChanged -= ProfileService_ProfileChanged;
-            imageSaveMediator.BeforeImageSaved -= ImageSaveMediator_BeforeImageSaved;
-            imageSaveMediator.BeforeFinalizeImageSaved -= ImageSaveMediator_BeforeFinalizeImageSaved;
-
+            GuiderWatcher.guiderMediator.GuideEvent -= GuiderMediator_GuideEvent;
             return base.Teardown();
         }
 
-        private void ProfileService_ProfileChanged(object sender, EventArgs e) {
-            // Rase the event that this profile specific value has been changed due to the profile switch
-            RaisePropertyChanged(nameof(ProfileSpecificNotificationMessage));
-        }
+        private static IGuiderMediator guiderMediator;
 
-        private Task ImageSaveMediator_BeforeImageSaved(object sender, BeforeImageSavedEventArgs e) {
-            // Insert the example FITS keyword of a specific data type into the image metadata object prior to the file being saved
-            // FITS keywords have a maximum of 8 characters. Comments are options. Comments that are too long will be truncated.
-
-            string exampleKeywordComment = "This is a {0} keyword";
-
-            // string
-            string exampleStringKeywordName = "STRKEYWD";
-            string exampleStringKeywordValue = "Example";
-            e.Image.MetaData.GenericHeaders.Add(new StringMetaDataHeader(exampleStringKeywordName, exampleStringKeywordValue, string.Format(exampleKeywordComment, "string")));
-
-            // integer
-            string exampleIntKeywordName = "INTKEYWD";
-            int exampleIntKeywordValue = 5;
-            e.Image.MetaData.GenericHeaders.Add(new IntMetaDataHeader(exampleIntKeywordName, exampleIntKeywordValue, string.Format(exampleKeywordComment, "integer")));
-
-            // double
-            string exampleDoubleKeywordName = "DBLKEYWD";
-            double exampleDoubleKeywordValue = 1.3d;
-            e.Image.MetaData.GenericHeaders.Add(new DoubleMetaDataHeader(exampleDoubleKeywordName, exampleDoubleKeywordValue, string.Format(exampleKeywordComment, "double")));
-
-            // Classes also exist for other data types:
-            // BoolMetaDataHeader()
-            // DateTimeMetaDataHeader()
-
-            return Task.CompletedTask;
-        }
-
-        private Task ImageSaveMediator_BeforeFinalizeImageSaved(object sender, BeforeFinalizeImageSavedEventArgs e) {
-            // Populate the example image pattern with data. This can provide data that may not be immediately available
-            e.AddImagePattern(new ImagePattern(exampleImagePattern.Key, exampleImagePattern.Description, exampleImagePattern.Category) {
-                Value = $"{DateTime.Now:yyyy-MM-ddTHH:mm:ss.ffffffK}"
-            });
-
-            return Task.CompletedTask;
-        }
-
-        public string DefaultNotificationMessage {
-            get {
-                return Settings.Default.DefaultNotificationMessage;
-            }
+        public int HistorySize {
+            get => Properties.Settings.Default.HistorySize;
             set {
-                Settings.Default.DefaultNotificationMessage = value;
-                CoreUtil.SaveSettings(Settings.Default);
-                RaisePropertyChanged();
+                Properties.Settings.Default.HistorySize = value;
+                GuiderWatcherShared.Instance.history.HistorySize = value;
+                CoreUtil.SaveSettings(Properties.Settings.Default);
             }
         }
-
-        public string ProfileSpecificNotificationMessage {
-            get {
-                return pluginSettings.GetValueString(nameof(ProfileSpecificNotificationMessage), string.Empty);
-            }
-            set {
-                pluginSettings.SetValueString(nameof(ProfileSpecificNotificationMessage), value);
-                RaisePropertyChanged();
-            }
-        }
-
+     
         public event PropertyChangedEventHandler PropertyChanged;
         protected void RaisePropertyChanged([CallerMemberName] string propertyName = null) {
             this.PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
