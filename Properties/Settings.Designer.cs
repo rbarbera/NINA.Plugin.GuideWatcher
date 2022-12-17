@@ -37,13 +37,13 @@ namespace RBC.NINA.Plugin.GuiderWatcher.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("This is a notification")]
-        public string DefaultNotificationMessage {
+        [global::System.Configuration.DefaultSettingValueAttribute("10")]
+        public int HistorySize {
             get {
-                return ((string)(this["DefaultNotificationMessage"]));
+                return ((int)(this["HistorySize"]));
             }
             set {
-                this["DefaultNotificationMessage"] = value;
+                this["HistorySize"] = value;
             }
         }
     }

@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 
-namespace GuiderWatcher {
+namespace RBC.NINA.Plugin.GuiderWatcher {
 
     [Export(typeof(ResourceDictionary))]
     partial class Options : ResourceDictionary {

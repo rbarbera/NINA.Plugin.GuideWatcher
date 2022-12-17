@@ -16,6 +16,9 @@ using System.Threading.Tasks;
 using System.Windows;
 using Accord.IO;
 using static NINA.Equipment.SDK.CameraSDKs.SBIGSDK.SbigSharp.SBIG;
+using NINA.Core.Enum;
+using NINA.Core.Interfaces;
+using NINA.Equipment.Equipment;
 
 namespace RBC.NINA.Plugin.GuiderWatcher {
    
@@ -28,32 +31,37 @@ namespace RBC.NINA.Plugin.GuiderWatcher {
     public class WaitForRMS : SequenceItem {
     
         [ImportingConstructor]
-        public WaitForRMS(IGuiderMediator applicationMediator) {
-            this.GuiderMediator = applicationMediator;
+        public WaitForRMS() {
             this.RMS = 0.8;
         }
 
-        IGuiderMediator GuiderMediator;
         public WaitForRMS(WaitForRMS copyMe) {
-            this.GuiderMediator = copyMe.GuiderMediator;
             this.RMS = copyMe.RMS;
 
             CopyMetaData(copyMe);
         }
-
+        
         [JsonProperty]
         public double RMS { get; set; }
 
 
+        double RMSTotal {
+            get {
+                if (GuiderWatcherShared.Instance.history.RMS.Total == 0) {
+                    return this.RMS * GuiderWatcherShared.Instance.history.PixelScale;
+                } else {
+                    return GuiderWatcherShared.Instance.history.RMS.Total * GuiderWatcherShared.Instance.history.PixelScale;
+                }
+            }
+        }
+
         public override async Task Execute(IProgress<ApplicationStatus> progress, CancellationToken token) {
-            var error = this.GuiderMediator.GetInfo().RMSError.Total.Arcseconds;
             try {
-                while (error > this.RMS) {     
+                while (RMSTotal > this.RMS) {     
                     progress?.Report(new ApplicationStatus() {
-                        Status = $"Waiting for RMS {error:F2}\" <= {this.RMS:F2}\""
+                        Status = $"Waiting for RMS {RMSTotal:F2}\" <= {this.RMS:F2}\""
                     });
                     await Task.Delay(TimeSpan.FromSeconds(1), token);
-                    error = this.GuiderMediator.GetInfo().RMSError.Total.Arcseconds;
                 }
             } finally {
                 progress?.Report(new ApplicationStatus() { Status = "" });
